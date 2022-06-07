@@ -9,24 +9,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // By default, load the inbox
   load_mailbox('inbox');
 
-  var list = [];
   document.querySelector('#compose-form').onsubmit = send_mail;
-  document.querySelectorAll('.mail').forEach(button => { 
+  document.querySelectorAll('.mail').forEach(button => {
     console.log("hey");
     button.onclick = function() {
       console.log(this.dataset.id);
-      console.log("hey");
     };
   });
 
-  console.log(Array.from(document.getElementsByClassName('mail')))
   console.log(document.querySelectorAll('.mail'));
-  console.log(document.getElementsByClassName('mail'));
-  console.log(document.querySelector('#emails-view').children);
 
   document.querySelector('#load').addEventListener('click', () => {
     console.log("yes");
-    document.querySelectorAll('.mail').forEach(button => { 
+    document.querySelectorAll('.mail').forEach(button => {
       console.log("hey");
       button.onclick = function() {
         console.log(this.dataset.id);
@@ -50,9 +45,10 @@ function compose_email() {
 }
 
 function load_mailbox(mailbox) {
-  
+
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
+  document.querySelector('#email-text').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'none';
 
   // Show the mailbox name
@@ -84,30 +80,75 @@ function send_mail(){
 }
 
 function load(mailbox) {
-  if (mailbox === 'inbox') {
-    fetch('/emails/inbox')
-    .then(response => response.json())
-    .then(emails => {
-      // <div class="d-flex border p-2">
-      emails.slice().reverse().forEach(mail => {
-        const element =  document.createElement("button");
-        element.classList.add("d-flex", "w-100", "p-2", "border", "read", "mail");
-        element.setAttribute('data-id', mail.id)
-        document.querySelector('#emails-view').append(element);
-        const sender = document.createElement("div");
-        const subject = document.createElement("div");
-        const timestamp = document.createElement("div");
-        sender.classList.add('font-weight-bold');
-        subject.classList.add('pl-2');
-        timestamp.classList.add('ml-auto');
-        sender.innerHTML = mail.sender;
-        subject.innerHTML = mail.subject;
-        timestamp.innerHTML = mail.timestamp;
-        element.append(sender, subject, timestamp);
-        console.log(element)
-      });
+  fetch(`emails/${mailbox}`)
+  .then(response => response.json())
+  .then(emails => {
+    // <div class="d-flex border p-2">
+    emails.slice().reverse().forEach(mail => {
+      const element =  document.createElement("button");
+      element.classList.add("d-flex", "w-100", "p-2", "border", "read", "mail");
+      element.setAttribute('data-id', mail.id)
+      document.querySelector('#emails-view').append(element);
+      const sender = document.createElement("div");
+      const subject = document.createElement("div");
+      const timestamp = document.createElement("div");
+      sender.classList.add('font-weight-bold');
+      subject.classList.add('pl-2');
+      timestamp.classList.add('ml-auto');
+      sender.innerHTML = mail.sender;
+      subject.innerHTML = mail.subject;
+      timestamp.innerHTML = mail.timestamp;
+      element.append(sender, subject, timestamp);
+
+      element.addEventListener('click', () => view_mail(mail.id))
     });
-  };
-  console.log("mail")
-  console.log(document.querySelectorAll('#emails-view > button'));
+  });
 }
+
+function view_mail(id) {
+  document.querySelector('#compose-view').style.display = 'none';
+  document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#email-text').style.display = 'block';
+  const container = document.querySelector('#email-text');
+  container.innerHTML = '';
+  fetch(`/emails/${id}`)
+  .then(response => response.json())
+  .then(email => {
+    // From, To, Subject, Timestamp
+    values = {
+      sender: ["From", email['sender']],
+      recipient: ["To", email['recipients']],
+      subject: ["Subject", email['subject']],
+      timestamp: ["Timestamp", email['timestamp']],
+    }
+    console.log(email)
+    for (value in values) {
+      const element = document.createElement("div");
+      const div = document.createElement("div");
+      const content = document.createElement("div");
+      element.classList.add("d-flex");
+      container.append(element);
+      div.classList.add("font-weight-bold");
+      div.innerHTML = `${values[value][0]}: &nbsp;`;
+      content.innerHTML = values[value][1];
+      element.append(div, content);
+      console.log(values[value])
+    }
+
+    const element = document.createElement("div");
+    const content = document.createElement("div");
+    // const sender =  email.sender;
+    // const recipient =  email.recipient;
+    // const subject =  email.subject;
+    // const timestamp =  email.timestamp;
+    // const body =  email.body;
+  });
+}
+// "id": 100,
+// "sender": "foo@example.com",
+// "recipients": ["bar@example.com"],
+// "subject": "Hello!",
+// "body": "Hello, world!",
+// "timestamp": "Jan 2 2020, 12:00 AM",
+// "read": false,
+// "archived": false
