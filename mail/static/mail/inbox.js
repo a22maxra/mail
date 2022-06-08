@@ -9,26 +9,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // By default, load the inbox
   load_mailbox('inbox');
 
-  document.querySelector('#compose-form').onsubmit = send_mail;
-  document.querySelectorAll('.mail').forEach(button => {
-    console.log("hey");
-    button.onclick = function() {
-      console.log(this.dataset.id);
-    };
-  });
-
-  console.log(document.querySelectorAll('.mail'));
-
-  document.querySelector('#load').addEventListener('click', () => {
-    console.log("yes");
-    document.querySelectorAll('.mail').forEach(button => {
-      console.log("hey");
-      button.onclick = function() {
-        console.log(this.dataset.id);
-        console.log("hey");
-      };
-    });
-  });
+  document.querySelector('#compose-form').onsubmit = () => {
+    send_mail();
+    load_mailbox('sent');
+  };
 });
 
 
@@ -36,6 +20,7 @@ function compose_email() {
 
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#email-text').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'block';
 
   // Clear out composition fields
@@ -75,7 +60,6 @@ function send_mail(){
       // Print result
       console.log(result);
   });
-  load_mailbox('sent');
   return false;
 }
 
@@ -83,6 +67,7 @@ function load(mailbox) {
   fetch(`emails/${mailbox}`)
   .then(response => response.json())
   .then(emails => {
+
     // Load all emails
     emails.forEach(mail => {
       const element =  document.createElement("button");
@@ -103,12 +88,13 @@ function load(mailbox) {
       timestamp.innerHTML = mail.timestamp;
       element.append(sender, subject, timestamp);
       
-      element.addEventListener('click', () => view_mail(mail.id))
+      // Go to mail to read when clicking on it
+      element.addEventListener('click', () => view_mail(mail.id, mailbox))
     });
   });
 }
 
-function view_mail(id) {
+function view_mail(id, mailbox) {
   document.querySelector('#compose-view').style.display = 'none';
   document.querySelector('#emails-view').style.display = 'none';
   document.querySelector('#email-text').style.display = 'block';
@@ -124,7 +110,6 @@ function view_mail(id) {
       subject: ["Subject", email['subject']],
       timestamp: ["Timestamp", email['timestamp']],
     }
-    console.log(email)
     for (value in values) {
       const element = document.createElement("div");
       const div = document.createElement("div");
@@ -135,7 +120,6 @@ function view_mail(id) {
       div.innerHTML = `${values[value][0]}: &nbsp;`;
       content.innerHTML = values[value][1];
       element.append(div, content);
-      console.log(values[value])
     }
     // Body
     const element = document.createElement("div");
@@ -143,20 +127,57 @@ function view_mail(id) {
     element.innerHTML = email['body'];
     container.append(element);
 
+    // Load Reply and Archive buttons if the mailbox or either inbox or archive
+    if (mailbox == 'inbox' || mailbox ==='archive') {
+      const Reply = document.createElement("button");
+      const Archive = document.createElement("button");
+      Reply.innerHTML = "Reply";
+      Archive.innerHTML= "Archive";
+      Reply.classList.add("btn", "btn-primary", "mt-2");
+      Archive.classList.add("btn", "btn-primary", "mt-2", "ml-2");
+      container.append(Reply, Archive);
+
+      // Change appearance of Archive button if archived
+      if (email['archived'] == true){
+        Archive.classList.toggle("btn-danger");
+        Archive.classList.toggle("btn-primary");
+      };
+
+      // Archive email on click
+      Archive.addEventListener('click', () => {
+        fetch(`/emails/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+              archived: !email['archived'],
+          })
+        });
+        load_mailbox('inbox');
+      });
+
+      // Reply to email
+      Reply.addEventListener('click', () => {
+        compose_email();
+        console.log(email['subject'].slice(0,3));
+        if (email['subject'].slice(0,3) === "Re:") {
+          document.querySelector('#compose-subject').value = email['subject'];
+          console.log("if");
+        }
+        else {
+          document.querySelector('#compose-subject').value = `Re: ${email['subject']}`;
+          console.log("else");
+        }
+        document.querySelector('#compose-recipients').value = email['sender'];
+        document.querySelector('#compose-body').value = 
+        `On ${email['timestamp']} ${email['sender']} wrote: ${email['body']}`;
+      });
+    };
+
     // Mark as read
     fetch(`/emails/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
-          read: true
+          read: true,
       })
-    })
-    // const sender =  email.sender;
-    // const recipient =  email.recipient;
-    // const subject =  email.subject;
-    // const timestamp =  email.timestamp;
-    // const body =  email.body;
+    });
   });
-  fetch(`/emails/${id}`)
-  .then(response => response.json())
-  .then(email => { console.log(email)});
 }
