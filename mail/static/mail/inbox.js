@@ -83,10 +83,13 @@ function load(mailbox) {
   fetch(`emails/${mailbox}`)
   .then(response => response.json())
   .then(emails => {
-    // <div class="d-flex border p-2">
-    emails.slice().reverse().forEach(mail => {
+    // Load all emails
+    emails.forEach(mail => {
       const element =  document.createElement("button");
-      element.classList.add("d-flex", "w-100", "p-2", "border", "read", "mail");
+      if (mail.read === true){
+        element.classList.add("bg-secondary")
+      }
+      element.classList.add("d-flex", "w-100", "p-2", "border", "mail");
       element.setAttribute('data-id', mail.id)
       document.querySelector('#emails-view').append(element);
       const sender = document.createElement("div");
@@ -99,7 +102,7 @@ function load(mailbox) {
       subject.innerHTML = mail.subject;
       timestamp.innerHTML = mail.timestamp;
       element.append(sender, subject, timestamp);
-
+      
       element.addEventListener('click', () => view_mail(mail.id))
     });
   });
@@ -134,21 +137,26 @@ function view_mail(id) {
       element.append(div, content);
       console.log(values[value])
     }
-
+    // Body
     const element = document.createElement("div");
-    const content = document.createElement("div");
+    element.classList.add("d-flex", "border-top");
+    element.innerHTML = email['body'];
+    container.append(element);
+
+    // Mark as read
+    fetch(`/emails/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+          read: true
+      })
+    })
     // const sender =  email.sender;
     // const recipient =  email.recipient;
     // const subject =  email.subject;
     // const timestamp =  email.timestamp;
     // const body =  email.body;
   });
+  fetch(`/emails/${id}`)
+  .then(response => response.json())
+  .then(email => { console.log(email)});
 }
-// "id": 100,
-// "sender": "foo@example.com",
-// "recipients": ["bar@example.com"],
-// "subject": "Hello!",
-// "body": "Hello, world!",
-// "timestamp": "Jan 2 2020, 12:00 AM",
-// "read": false,
-// "archived": false
